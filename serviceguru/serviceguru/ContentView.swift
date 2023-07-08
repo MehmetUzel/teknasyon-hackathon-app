@@ -7,16 +7,8 @@
 
 import SwiftUI
 import CoreData
-import MapKit
-
-struct Location: Identifiable {
-    let id = UUID()
-    let name: String
-    let coordinate: CLLocationCoordinate2D
-}
 
 struct ContentView: View {
-    
     
     @EnvironmentObject var hmpgModel: HomePageModel
     
@@ -31,7 +23,6 @@ struct ContentView: View {
     
     func DriverView() -> some View {
         Text("Driver Login")
-        
     }
     
     func EmployeeView() -> some View {
@@ -107,39 +98,6 @@ struct ContentView: View {
     
     // ----- Map Functions
     
-    func getCoordinateRegion() -> MKCoordinateRegion {
-            let coordinates = locations.map { $0.coordinate }
-            let boundingRect = MKPolygon(points: coordinates, count: coordinates.count).boundingMapRect
-            let region = MKCoordinateRegion(boundingRect: boundingRect)
-            return region
-        }
-
-        func calculateRoute() {
-            guard locations.count > 1 else { return }
-            isRouting = true
-
-            let request = MKDirections.Request()
-            request.source = MKMapItem(placemark: MKPlacemark(coordinate: locations.first!.coordinate))
-            request.destination = MKMapItem(placemark: MKPlacemark(coordinate: locations.last!.coordinate))
-            request.waypoints = locations.dropFirst().dropLast().map {
-                MKPlacemark(coordinate: $0.coordinate)
-            }
-            request.requestsAlternateRoutes = false
-
-            let directions = MKDirections(request: request)
-            directions.calculate { response, error in
-                isRouting = false
-                guard let route = response?.routes.first else { return }
-                self.route = route
-            }
-        }
-
-        func formattedDistance(_ meters: CLLocationDistance) -> String {
-            let measurement = Measurement(value: meters, unit: UnitLength.meters)
-            let formatter = MeasurementFormatter()
-            formatter.unitOptions = .naturalScale
-            return formatter.string(from: measurement)
-        }
 }
 
 
