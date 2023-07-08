@@ -8,9 +8,17 @@
 import SwiftUI
 import CoreData
 
+struct Joke: Codable {
+    let value: String
+}
+
 struct ContentView: View {
     
     @EnvironmentObject var hmpgModel: HomePageModel
+    @State var text_id: String = ""
+    @State var text_password: String = ""
+    @State private var responseData: Data?
+    
     
     var body: some View {
         if hmpgModel.is_home == true{
@@ -22,7 +30,34 @@ struct ContentView: View {
     }
     
     func DriverView() -> some View {
-        Text("Driver Login")
+        VStack{
+            Text("Driver Login")
+            TextField("id", text: $text_id)
+            TextField("password", text: $text_password)
+            
+            Button {
+                Task {
+                    guard let url = URL(string: "https://lqtv67puee.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=121161BBA&password=2222&isDriver=0") else {
+                        return
+                    }
+                    
+                    let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                        
+                        if let error = error {
+                            print("Error: \(error.localizedDescription)")
+                        } else if let data = data {
+                            print(String(data: data, encoding: .utf8) ?? "")
+                            responseData = data
+                        }
+                    }
+                    
+                    task.resume()
+                    
+                }
+            } label: {
+                Text("Login")
+            }
+        }
     }
     
     func EmployeeView() -> some View {
@@ -99,8 +134,6 @@ struct ContentView: View {
     // ----- Map Functions
     
 }
-
-
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
