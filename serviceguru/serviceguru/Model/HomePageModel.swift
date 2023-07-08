@@ -9,8 +9,8 @@ import SwiftUI
 
 /*
  Return : 0 means not exist
- Return : 1 means driver
- Return : 2 means employee
+ Return : 1 means employee
+ Return : 2 means driveremployee
  */
 
 func getRole() -> Int {

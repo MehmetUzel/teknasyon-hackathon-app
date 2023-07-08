@@ -8,9 +8,6 @@
 import SwiftUI
 import CoreData
 
-struct Joke: Codable {
-    let value: String
-}
 
 struct ContentView: View {
     
@@ -29,39 +26,56 @@ struct ContentView: View {
         }
     }
     
+    func LoginButton() -> some View{
+        Button {
+            Task {
+                guard let url = URL(string: "https://lqtv67puee.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(text_id)&password=\(text_password)&isDriver=\(hmpgModel.role - 1)") else {
+                    return
+                }
+                
+                let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                    
+                    if let error = error {
+                        print("Error: \(error.localizedDescription)")
+                    } else if let data = data {
+                        print(String(data: data, encoding: .utf8) ?? "")
+                        responseData = data
+                    }
+                }
+                
+                task.resume()
+                
+            }
+        } label: {
+            VStack{
+                Text("Login")
+                    .foregroundColor(AppTheme.textColor)
+                    .font(.system(size: AppTheme.bodyTextSize))
+                    .padding(UIScreen.screenWidth * 0.01)
+            }
+            .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
+            .background(.gray)
+            .cornerRadius(16)
+        }
+    }
+    
     func DriverView() -> some View {
         VStack{
             Text("Driver Login")
-            TextField("id", text: $text_id)
-            TextField("password", text: $text_password)
+            TextField("id", text: $text_id).padding()
+            TextField("password", text: $text_password).padding()
+            LoginButton()
             
-            Button {
-                Task {
-                    guard let url = URL(string: "https://lqtv67puee.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=121161BBA&password=2222&isDriver=0") else {
-                        return
-                    }
-                    
-                    let task = URLSession.shared.dataTask(with: url) { data, response, error in
-                        
-                        if let error = error {
-                            print("Error: \(error.localizedDescription)")
-                        } else if let data = data {
-                            print(String(data: data, encoding: .utf8) ?? "")
-                            responseData = data
-                        }
-                    }
-                    
-                    task.resume()
-                    
-                }
-            } label: {
-                Text("Login")
-            }
         }
     }
     
     func EmployeeView() -> some View {
-        Text("Employee Login")
+        VStack{
+            Text("Employee Login")
+            TextField("id", text: $text_id).padding()
+            TextField("password", text: $text_password).padding()
+            LoginButton()
+        }
     }
     
     func ClientView() -> some View{
@@ -71,10 +85,10 @@ struct ContentView: View {
                 Spacer()
             }
             Spacer()
-            if hmpgModel.role == 1{
+            if hmpgModel.role == 2{
                 DriverView()
             }
-            else if hmpgModel.role == 2{
+            else if hmpgModel.role == 1{
                 EmployeeView()
             }
             Spacer()
@@ -109,8 +123,8 @@ struct ContentView: View {
                 .background(Color.blue)
                 .cornerRadius(30)
                 .onTapGesture {
-                    updateRole(role: 2)
-                    hmpgModel.role = 2
+                    updateRole(role: 1)
+                    hmpgModel.role = 1
                     hmpgModel.is_home.toggle()
                 }
                 
@@ -121,8 +135,8 @@ struct ContentView: View {
                 .background(Color.blue)
                 .cornerRadius(30)
                 .onTapGesture {
-                    updateRole(role: 1)
-                    hmpgModel.role = 1
+                    updateRole(role: 2)
+                    hmpgModel.role = 2
                     hmpgModel.is_home.toggle()
                     
                 }
