@@ -15,6 +15,7 @@ struct ContentView: View {
     @State var text_id: String = ""
     @State var text_password: String = ""
     @State private var responseData: Data?
+    @State var status: String = ""
     
     
     var body: some View {
@@ -27,35 +28,50 @@ struct ContentView: View {
     }
     
     func LoginButton() -> some View{
-        Button {
-            Task {
-                guard let url = URL(string: "https://lqtv67puee.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(text_id)&password=\(text_password)&isDriver=\(hmpgModel.role - 1)") else {
-                    return
-                }
-                
-                let task = URLSession.shared.dataTask(with: url) { data, response, error in
-                    
-                    if let error = error {
-                        print("Error: \(error.localizedDescription)")
-                    } else if let data = data {
-                        print(String(data: data, encoding: .utf8) ?? "")
-                        responseData = data
+        VStack{
+            Text(status)
+                .padding()
+            Button {
+                Task {
+                    guard let url = URL(string: "https://lqtv67puee.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(text_id)&password=\(text_password)&isDriver=\(hmpgModel.role - 1)") else {
+                        return
                     }
+                    
+                    let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                        
+                        if let error = error {
+                            print("Error: \(error.localizedDescription)")
+                        } else if let httpResponse = response as? HTTPURLResponse {
+                            if httpResponse.statusCode == 200 {
+                                DispatchQueue.main.async {
+                                    if let data = data {
+                                        self.responseData = data
+                                        status = String(data: data, encoding: .utf8) ?? ""
+                                    }
+                                }
+                            } else if httpResponse.statusCode == 400 {
+                                if let data = data {
+                                    status = String(data: data, encoding: .utf8) ?? "Error"
+                                }
+                            } else {
+                                status = "Undefined Error"
+                            }
+                        }                    }
+                    
+                    task.resume()
+                    
                 }
-                
-                task.resume()
-                
+            } label: {
+                VStack{
+                    Text("Login")
+                        .foregroundColor(AppTheme.textColor)
+                        .font(.system(size: AppTheme.bodyTextSize))
+                        .padding(UIScreen.screenWidth * 0.01)
+                }
+                .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
+                .background(.gray)
+                .cornerRadius(16)
             }
-        } label: {
-            VStack{
-                Text("Login")
-                    .foregroundColor(AppTheme.textColor)
-                    .font(.system(size: AppTheme.bodyTextSize))
-                    .padding(UIScreen.screenWidth * 0.01)
-            }
-            .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
-            .background(.gray)
-            .cornerRadius(16)
         }
     }
     
