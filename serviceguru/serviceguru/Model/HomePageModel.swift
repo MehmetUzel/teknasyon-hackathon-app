@@ -33,6 +33,7 @@ func setID(user_id: String) {
 
 
 class HomePageModel: ObservableObject{
+    @Published var send_panel: Bool = false
     @Published var is_home: Bool = true
     @Published var role: Int = getRole()
     @Published var user_id: String = getId()

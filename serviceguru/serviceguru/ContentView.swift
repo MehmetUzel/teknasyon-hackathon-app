@@ -16,14 +16,60 @@ struct ContentView: View {
     @State var text_password: String = ""
     @State private var responseData: Data?
     @State var status: String = ""
+    @State var userData: String = ""
     
     
     var body: some View {
-        if hmpgModel.is_home == true{
+        if hmpgModel.is_home == true && hmpgModel.send_panel == false{
             RoleSelectionView()
         }
-        else if hmpgModel.is_home == false{
+        else if hmpgModel.is_home == false && hmpgModel.send_panel == false{
             ClientView()
+        }
+        else if hmpgModel.is_home == false && hmpgModel.send_panel == true{
+            UserPanelView()
+        }
+    }
+    
+    func UserPanelView() -> some View{
+        VStack{
+            LogOutButtonView()
+            Text("Welcome Employee")
+                .foregroundColor(AppTheme.textColor)
+                .font(.system(size: AppTheme.bodyTextSize))
+                .padding(UIScreen.screenWidth * 0.01)
+            Text(userData)
+                .padding()
+    
+        }.onAppear{
+            Task {
+                guard let url = URL(string: "https://h91gqyffrl.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&isDriver=\(hmpgModel.role - 1)") else {
+                    return
+                }
+                
+                let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                    
+                    if let error = error {
+                        print("Error: \(error.localizedDescription)")
+                    } else if let httpResponse = response as? HTTPURLResponse {
+                        if httpResponse.statusCode == 200 {
+                            DispatchQueue.main.async {
+                                if let data = data {
+                                    self.responseData = data
+                                    userData = String(data: data, encoding: .utf8) ?? ""
+                                }
+                            }
+                        } else if httpResponse.statusCode == 400 {
+                            if let data = data {
+                                userData = String(data: data, encoding: .utf8) ?? "Error"
+                            }
+                        } else {
+                            userData = "Undefined Error"
+                        }
+                    }
+                }
+                task.resume()
+            }
         }
     }
     
@@ -47,6 +93,13 @@ struct ContentView: View {
                                     if let data = data {
                                         self.responseData = data
                                         status = String(data: data, encoding: .utf8) ?? ""
+                                        hmpgModel.user_id = text_id
+                                        setID(user_id: text_id)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            withAnimation{
+                                                hmpgModel.send_panel.toggle()
+                                            }
+                                        }
                                     }
                                 }
                             } else if httpResponse.statusCode == 400 {
@@ -56,7 +109,9 @@ struct ContentView: View {
                             } else {
                                 status = "Undefined Error"
                             }
-                        }                    }
+                        }
+                        
+                    }
                     
                     task.resume()
                     
@@ -81,7 +136,6 @@ struct ContentView: View {
             TextField("id", text: $text_id).padding()
             TextField("password", text: $text_password).padding()
             LoginButton()
-            
         }
     }
     
@@ -115,6 +169,9 @@ struct ContentView: View {
         Button(action: {
             withAnimation{
                 hmpgModel.is_home.toggle()
+                text_id = ""
+                text_password = ""
+                status = ""
             }
         }){
             VStack{
@@ -125,6 +182,28 @@ struct ContentView: View {
             }
             .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
             .background(.gray)
+            .cornerRadius(16)
+        }
+    }
+    
+    func LogOutButtonView() -> some View{
+        Button(action: {
+            withAnimation{
+                hmpgModel.is_home.toggle()
+                hmpgModel.send_panel.toggle()
+                text_id = ""
+                text_password = ""
+                status = ""
+            }
+        }){
+            VStack{
+                Text("Log Out")
+                    .foregroundColor(AppTheme.textColor)
+                    .font(.system(size: AppTheme.bodyTextSize))
+                    .padding(UIScreen.screenWidth * 0.01)
+            }
+            .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
+            .background(.red)
             .cornerRadius(16)
         }
     }
