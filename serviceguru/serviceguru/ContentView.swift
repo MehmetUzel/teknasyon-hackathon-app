@@ -76,15 +76,17 @@ struct ContentView: View {
                     .padding(UIScreen.screenWidth * 0.01)
                     .padding(.trailing)
             }
-            Map(
-                coordinateRegion: $mapRegion,
-                interactionModes: MapInteractionModes.all,
-                showsUserLocation: true,
-                annotationItems: MapLocations,
-                annotationContent: { location in
-                    MapMarker(coordinate: location.coordinate, tint: AppTheme.backgroundColor)
-                }
-            )
+            if hmpgModel.data_ready == true {
+                Map(
+                    coordinateRegion: $mapRegion,
+                    interactionModes: MapInteractionModes.all,
+                    showsUserLocation: true,
+                    annotationItems: MapLocations,
+                    annotationContent: { location in
+                        MapMarker(coordinate: location.coordinate, tint: AppTheme.backgroundColor)
+                    }
+                )
+            }
         }.onAppear{
             updateAdminData()
         }
@@ -96,9 +98,9 @@ struct ContentView: View {
                 LogOutButtonView()
                 Text("Welcome Driver")
             }
-                .foregroundColor(AppTheme.textColor)
-                .font(.system(size: AppTheme.bodyTextSize))
-                .padding(UIScreen.screenWidth * 0.01)
+            .foregroundColor(AppTheme.textColor)
+            .font(.system(size: AppTheme.bodyTextSize))
+            .padding(UIScreen.screenWidth * 0.01)
             
             if hmpgModel.data_ready == true {
                 VStack{
@@ -135,12 +137,16 @@ struct ContentView: View {
                         DispatchQueue.main.async {
                             if let data = data {
                                 do {
-                                        let myObject = try JSONDecoder().decode(PointsObj.self, from: data)
-                                        // Use myObject here
-                                        pointsObj = myObject
-                                        hmpgModel.data_ready = true
-                                        AddPointsToList()
-                                        print(myObject)
+                                    let myObject = try JSONDecoder().decode(PointsObj.self, from: data)
+                                    // Use myObject here
+                                    pointsObj = myObject
+                                    AddPointsToList()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                        withAnimation{
+                                            hmpgModel.data_ready = true
+                                        }
+                                    }
+                                    print(myObject)
                                     
                                 } catch {
                                     print("Error decoding JSON: \(error)")
@@ -213,8 +219,8 @@ struct ContentView: View {
     
     func AddPointsToList() {
         if pointsObj != nil{
-                for index in 0..<(pointsObj?.id.count ?? 0){
-                MapLocations.append(MapLocation(name: (pointsObj?.id[index])!, latitude: (pointsObj?.lattitude[index])!, longitude: (pointsObj?.longitude[index])!))
+            for index in 15..<(pointsObj?.id.count ?? 0){
+                MapLocations.append(MapLocation(name: "dsflkjglkdsf", latitude: (pointsObj?.latitude[index])!, longitude: (pointsObj?.longitude[index])!))
             }
         }
     }
@@ -471,10 +477,10 @@ struct ContentView: View {
             }
         }){
             VStack{
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: AppTheme.headerTextSize*1.1))
-                        .padding(UIScreen.screenWidth * 0.01)
-                        .foregroundColor(.red)
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: AppTheme.headerTextSize*1.1))
+                    .padding(UIScreen.screenWidth * 0.01)
+                    .foregroundColor(.red)
             }.padding(.horizontal)
         }
     }
@@ -530,34 +536,34 @@ struct ContentView: View {
 
 struct PointsObj: Codable {
     let id: [String]
-    let lattitude: [Double]
+    let latitude: [Double]
     let longitude: [Double]
     
     enum CodingKeys: String, CodingKey {
-        case id = "id"
-        case lattitude = "lattitude"
-        case longitude = "longitude"
+        case id
+        case latitude = "lattitude"
+        case longitude
     }
     
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let idString = try container.decode(String.self, forKey: .id)
-        id = idString.components(separatedBy: ",").compactMap { String($0) }
-        let latString = try container.decode(String.self, forKey: .lattitude)
-        lattitude = latString.components(separatedBy: ",").compactMap { Double($0) }
-        let longString = try container.decode(String.self, forKey: .longitude)
-        longitude = longString.components(separatedBy: ",").compactMap { Double($0) }
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        let idString = id.map { String($0) }.joined(separator: ",")
-        try container.encode(idString, forKey: .id)
-        let latString = lattitude.map { String($0) }.joined(separator: ",")
-        try container.encode(latString, forKey: .lattitude)
-        let longString = longitude.map { String($0) }.joined(separator: ",")
-        try container.encode(longString, forKey: .longitude)
-    }
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode([String].self, forKey: .id)
+            
+            let latStringArray = try container.decode([String].self, forKey: .latitude)
+            latitude = latStringArray.compactMap { Double($0) }
+            
+            let longStringArray = try container.decode([String].self, forKey: .longitude)
+            longitude = longStringArray.compactMap { Double($0) }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            let latStringArray = latitude.map { String($0) }
+            try container.encode(latStringArray, forKey: .latitude)
+            let longStringArray = longitude.map { String($0) }
+            try container.encode(longStringArray, forKey: .longitude)
+        }
 }
 
 struct Plate: Codable {
