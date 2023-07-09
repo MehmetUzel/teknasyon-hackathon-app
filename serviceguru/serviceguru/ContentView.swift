@@ -25,7 +25,6 @@ struct ContentView: View {
     @EnvironmentObject var hmpgModel: HomePageModel
     @State var text_id: String = ""
     @State var text_password: String = ""
-    @State private var responseData: Data?
     @State var status: String = ""
     @State var userData: String = ""
     @State var userObject: [String: Any] = [:]
@@ -34,7 +33,8 @@ struct ContentView: View {
     @State private var mapRegion = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 41.015, longitude: 28.979), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
     
     
-    @State var userapiobject: UserAPIResponse?
+    @State var employeeObj: EmployeeObj?
+    
     let MapLocations = [
         MapLocation(name: "St Francis Memorial Hospital", latitude: 41.03290226402944, longitude: 28.967581809821),
         MapLocation(name: "The Ritz-Carlton, San Francisco", latitude: 41.09290226402944, longitude: 28.907581809821),
@@ -57,13 +57,16 @@ struct ContentView: View {
             else if hmpgModel.role == 2 {
                 DriverPanelView()
             }
+            else if hmpgModel.role == 3 {
+                AdminPanelView()
+            }
         }
     }
     
-    func DriverPanelView() -> some View{
+    func AdminPanelView() -> some View{
         VStack{
             LogOutButtonView()
-            Text("Welcome Driver")
+            Text("Welcome Admin")
                 .foregroundColor(AppTheme.textColor)
                 .font(.system(size: AppTheme.bodyTextSize))
                 .padding(UIScreen.screenWidth * 0.01)
@@ -81,71 +84,99 @@ struct ContentView: View {
         }
     }
     
-    func UserPanelView() -> some View{
+    func DriverPanelView() -> some View{
         VStack{
             LogOutButtonView()
-            Text("Welcome Employee")
+            Text("Welcome Driver")
                 .foregroundColor(AppTheme.textColor)
                 .font(.system(size: AppTheme.bodyTextSize))
                 .padding(UIScreen.screenWidth * 0.01)
             Text(userData)
                 .padding()
+        }
+    }
+    
+    func updateUserData(){
+        Task {
+            guard let url = URL(string: "https://h91gqyffrl.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&isDriver=\(hmpgModel.role - 1)") else {
+                return
+            }
+            
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                
+                if let error = error {
+                    print("Error: \(error.localizedDescription)")
+                } else if let httpResponse = response as? HTTPURLResponse {
+                    if httpResponse.statusCode == 200 {
+                        DispatchQueue.main.async {
+                            if let data = data {
+                                do {
+                                    let myObject = try JSONDecoder().decode(EmployeeObj.self, from: data)
+                                    // Use myObject here
+                                    employeeObj = myObject
+                                    hmpgModel.data_ready = true
+                                    print(myObject)
+                                } catch {
+                                    print("Error decoding JSON: \(error)")
+                                }
+                                userData = String(data: data, encoding: .utf8) ?? ""
+                                print(userData)
+                            }
+                        }
+                    } else if httpResponse.statusCode == 400 {
+                        if let data = data {
+                            userData = String(data: data, encoding: .utf8) ?? "Error"
+                        }
+                    } else {
+                        userData = "Undefined Error"
+                    }
+                }
+            }
+            task.resume()
+        }
+    }
+    
+    func UserPanelView() -> some View{
+        VStack{
+            HStack{
+                Text("Welcome")
+                if employeeObj != nil{
+                    Text(employeeObj?.fullName.S ?? "Employee")
+                }
+                Spacer()
+                LogOutButtonView()
+            }
+            .foregroundColor(AppTheme.textColor)
+            .font(.system(size: AppTheme.bodyTextSize))
+            .padding(UIScreen.screenWidth * 0.01)
+            Text(userData)
+                .padding()
             if hmpgModel.data_ready == true {
                 VStack{
                     Text("Weekly Attendance")
-                    if userapiobject != nil{
-                        HStack{
-                            moToggleAttendanceView(daystr: "mo")
+                    if employeeObj != nil{
+                        VStack{
+                            ToggleAttendanceView(daystr: "mon", indx: 0)
+                            ToggleAttendanceView(daystr: "tue", indx: 1)
+                            ToggleAttendanceView(daystr: "wed", indx: 2)
+                            ToggleAttendanceView(daystr: "thu", indx: 3)
+                            ToggleAttendanceView(daystr: "fri", indx: 4)
+                            ToggleAttendanceView(daystr: "sat", indx: 5)
+                            ToggleAttendanceView(daystr: "sun", indx: 6)
                         }
                     }
                 }
             }
         }.onAppear{
-            Task {
-                guard let url = URL(string: "https://h91gqyffrl.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&isDriver=\(hmpgModel.role - 1)") else {
-                    return
-                }
-                
-                let task = URLSession.shared.dataTask(with: url) { data, response, error in
-                    
-                    if let error = error {
-                        print("Error: \(error.localizedDescription)")
-                    } else if let httpResponse = response as? HTTPURLResponse {
-                        if httpResponse.statusCode == 200 {
-                            DispatchQueue.main.async {
-                                if let data = data {
-                                    self.responseData = data
-                                    userData = String(data: data, encoding: .utf8) ?? ""
-                                    //print(userData)
-                                    if let jsonObject = convertStringToObject(userData) {
-                                        // Use the converted object
-                                        print(jsonObject)
-                                        userapiobject = jsonObject
-                                        hmpgModel.data_ready = true
-                                    } else {
-                                        print("Failed to convert string to object.")
-                                    }
-                                }
-                            }
-                        } else if httpResponse.statusCode == 400 {
-                            if let data = data {
-                                userData = String(data: data, encoding: .utf8) ?? "Error"
-                            }
-                        } else {
-                            userData = "Undefined Error"
-                        }
-                    }
-                }
-                task.resume()
-            }
+            updateUserData()
         }
     }
     
-    func moToggleAttendanceView(daystr: String) -> some View{
+    func ToggleAttendanceView(daystr: String, indx: Int) -> some View{
         VStack{
             Button {
                 Task {
-                    guard let url = URL(string: "https://zbldso9cgi.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&day=\(getDayOfWeek(from: daystr) ?? 0)") else {
+                    guard let url = URL(string: "https://zbldso9cgi.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&day=\(indx)") else {
                         return
                     }
                     
@@ -157,11 +188,10 @@ struct ContentView: View {
                             if httpResponse.statusCode == 200 {
                                 DispatchQueue.main.async {
                                     if let data = data {
-                                        self.responseData = data
                                         status = String(data: data, encoding: .utf8) ?? ""
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
                                             withAnimation{
-                                                userapiobject!.mo = !userapiobject!.mo
+                                                updateUserData()
                                             }
                                         }
                                     }
@@ -188,7 +218,7 @@ struct ContentView: View {
                         .padding(UIScreen.screenWidth * 0.01)
                 }
                 .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
-                .background(userapiobject!.mo ? .gray : AppTheme.backgroundColor)
+                .background(employeeObj?.attendance[indx]==0 ? .gray : AppTheme.backgroundColor)
                 .cornerRadius(16)
             }
         }
@@ -212,7 +242,6 @@ struct ContentView: View {
                             if httpResponse.statusCode == 200 {
                                 DispatchQueue.main.async {
                                     if let data = data {
-                                        self.responseData = data
                                         status = String(data: data, encoding: .utf8) ?? ""
                                         hmpgModel.user_id = text_id
                                         setID(user_id: text_id)
@@ -269,6 +298,15 @@ struct ContentView: View {
         }
     }
     
+    func AdminView() -> some View {
+        VStack{
+            Text("Admin Login")
+            TextField("id", text: $text_id).padding()
+            TextField("password", text: $text_password).padding()
+            LoginButton()
+        }
+    }
+    
     func ClientView() -> some View{
         VStack{
             HStack{
@@ -281,6 +319,9 @@ struct ContentView: View {
             }
             else if hmpgModel.role == 1{
                 EmployeeView()
+            }
+            else if hmpgModel.role == 3{
+                AdminView()
             }
             Spacer()
         }
@@ -332,191 +373,121 @@ struct ContentView: View {
         }
     }
     
+    func roleStack(headert: String) -> some View{
+        VStack{
+            Text(headert)
+        }
+        .frame(width: UIScreen.screenWidth * 0.6, height: UIScreen.screenHeight * 0.1)
+        .background(AppTheme.backgroundColor)
+        .cornerRadius(30)
+    }
+    
     func RoleSelectionView() -> some View {
         VStack{
-            HStack{
-                VStack{
-                    Text("Employee")
-                }
-                .frame(width: UIScreen.screenWidth * 0.4, height: UIScreen.screenHeight * 0.22)
-                .background(Color.blue)
-                .cornerRadius(30)
+            roleStack(headert: "Employee")
                 .onTapGesture {
                     updateRole(role: 1)
                     hmpgModel.role = 1
                     hmpgModel.is_home.toggle()
                 }
-                
-                VStack{
-                    Text("Driver")
-                }
-                .frame(width: UIScreen.screenWidth * 0.4, height: UIScreen.screenHeight * 0.22)
-                .background(Color.blue)
-                .cornerRadius(30)
+            
+            roleStack(headert: "Driver")
                 .onTapGesture {
                     updateRole(role: 2)
                     hmpgModel.role = 2
                     hmpgModel.is_home.toggle()
-                    
                 }
-            }
-        }
-    }
-    
-    
-    // ----- Map Functions
-    
-    func convertStringToObject(_ jsonString: String) -> UserAPIResponse? {
-        if let jsonObject = convertJSONToClass(jsonString: jsonString) {
-            return jsonObject
-        }
-        return nil
-    }
-    
-    
-    func getDayOfWeek(from weekday: String) -> Int? {
-        let weekdays = ["mo", "tu", "we", "th", "fr", "sa", "su"]
-        
-        guard let index = weekdays.firstIndex(of: weekday) else {
-            return nil
+            roleStack(headert: "Admin")
+                .onTapGesture {
+                    updateRole(role: 3)
+                    hmpgModel.role = 3
+                    hmpgModel.is_home.toggle()
+                }
         }
         
-        let adjustedIndex = (index + 1) % weekdays.count // Adjust index to start from Monday
         
-        return adjustedIndex
-    }
-    
-}
-
-/*
- // Struct representing the API response
- struct UserAPIResponse: Codable {
- let tu: BoolWrapper?
- let mo: BoolWrapper?
- let su: BoolWrapper?
- let lattitude: NumberWrapper?
- let fullName: StringWrapper?
- let fr: BoolWrapper?
- let sa: BoolWrapper?
- let we: BoolWrapper?
- let th: BoolWrapper?
- let longitude: NumberWrapper?
- let id: StringWrapper?
- let phone: StringWrapper?
- }
- 
- // Struct representing a wrapper for boolean values
- struct BoolWrapper: Codable {
- let BOOL: Bool?
- }
- 
- // Struct representing a wrapper for number values
- struct NumberWrapper: Codable {
- let N: String?
- }
- 
- // Struct representing a wrapper for string values
- struct StringWrapper: Codable {
- let S: String?
- }
- */
-
-class UserAPIResponse: ObservableObject {
-    @Published var tu = false
-    @Published var mo = true
-    @Published var su = true
-    @Published var lattitude: Double = 0.0
-    @Published var fullName = ""
-    @Published var fr = true
-    @Published var sa = true
-    @Published var we = false
-    @Published var th = true
-    @Published var longitude: Double = 0.0
-    @Published var id = ""
-    @Published var phone = ""
-}
-
-func convertJSONToClass(jsonString: String) -> UserAPIResponse? {
-    guard let jsonData = jsonString.data(using: .utf8) else {
-        return nil
-    }
-    
-    do {
-        let decoder = JSONDecoder()
-        let jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: [])
+        // ----- Map Functions
         
-        guard let jsonDict = jsonObject as? [String: Any] else {
-            return nil
-        }
         
-        let myClass = UserAPIResponse()
         
-        // Access each key-value pair in the dictionary and update the corresponding property
-        for (key, value) in jsonDict {
-            switch key {
-            case "tu":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.tu = bool
-                }
-            case "mo":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.mo = bool
-                }
-            case "su":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.su = bool
-                }
-            case "lattitude":
-                if let numberValue = value as? [String: String], let stringValue = numberValue["N"], let doubleValue = Double(stringValue) {
-                    myClass.lattitude = doubleValue
-                }
-            case "fullName":
-                if let stringValue = value as? [String: String], let fullName = stringValue["S"] {
-                    myClass.fullName = fullName
-                }
-            case "fr":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.fr = bool
-                }
-            case "sa":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.sa = bool
-                }
-            case "we":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.we = bool
-                }
-            case "th":
-                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
-                    myClass.th = bool
-                }
-            case "longitude":
-                if let numberValue = value as? [String: String], let stringValue = numberValue["N"], let doubleValue = Double(stringValue) {
-                    myClass.longitude = doubleValue
-                }
-            case "id":
-                if let stringValue = value as? [String: String], let id = stringValue["S"] {
-                    myClass.id = id
-                }
-            case "phone":
-                if let stringValue = value as? [String: String], let phone = stringValue["S"] {
-                    myClass.phone = phone
-                }
-            default:
-                break
-            }
-        }
-        
-        return myClass
-    } catch {
-        print("Error: \(error)")
-        return nil
     }
 }
-
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+    
+    struct Lattitude: Codable {
+        let N: String
     }
-}
+    
+    struct FullName: Codable {
+        let S: String
+    }
+    
+    struct Longitude: Codable {
+        let N: String
+    }
+    
+    struct ID: Codable {
+        let S: String
+    }
+    
+    struct Phone: Codable {
+        let S: String
+    }
+    
+    struct DriverID: Codable {
+        let S: String
+    }
+    
+    struct EmployeeObj: Codable {
+        let lattitude: Lattitude
+        let fullName: FullName
+        let longitude: Longitude
+        let id: ID
+        let phone: Phone
+        let driverId: DriverID
+        let attendance: [Int] // Changed the type to an array of Integers
+        
+        enum CodingKeys: String, CodingKey {
+            case lattitude = "lattitude"
+            case fullName = "fullName"
+            case longitude = "longitude"
+            case id = "id"
+            case phone = "phone"
+            case driverId = "driverId"
+            case attendance = "attendance"
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            lattitude = try container.decode(Lattitude.self, forKey: .lattitude)
+            fullName = try container.decode(FullName.self, forKey: .fullName)
+            longitude = try container.decode(Longitude.self, forKey: .longitude)
+            id = try container.decode(ID.self, forKey: .id)
+            phone = try container.decode(Phone.self, forKey: .phone)
+            driverId = try container.decode(DriverID.self, forKey: .driverId)
+            
+            let attendanceString = try container.decode(String.self, forKey: .attendance)
+            attendance = attendanceString.components(separatedBy: ",").compactMap { Int($0) }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(lattitude, forKey: .lattitude)
+            try container.encode(fullName, forKey: .fullName)
+            try container.encode(longitude, forKey: .longitude)
+            try container.encode(id, forKey: .id)
+            try container.encode(phone, forKey: .phone)
+            try container.encode(driverId, forKey: .driverId)
+            
+            let attendanceString = attendance.map { String($0) }.joined(separator: ",")
+            try container.encode(attendanceString, forKey: .attendance)
+        }
+    }
+    
+    
+    
+    
+    struct ContentView_Previews: PreviewProvider {
+        static var previews: some View {
+            ContentView()
+        }
+    }

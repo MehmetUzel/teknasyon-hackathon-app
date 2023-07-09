@@ -11,6 +11,7 @@ import SwiftUI
  Return : 0 means not exist
  Return : 1 means employee
  Return : 2 means driveremployee
+ Return : 3 means admin
  */
 
 func getRole() -> Int {
