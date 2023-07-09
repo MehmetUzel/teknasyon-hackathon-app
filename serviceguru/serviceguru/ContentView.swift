@@ -7,6 +7,17 @@
 
 import SwiftUI
 import CoreData
+import MapKit
+
+struct MapLocation: Identifiable {
+    let id = UUID()
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
 
 
 struct ContentView: View {
@@ -20,9 +31,16 @@ struct ContentView: View {
     @State var userObject: [String: Any] = [:]
     @State var mondayComing: Bool = false
     @State var tuesdayComing: Bool = false
+    @State private var mapRegion = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 41.015, longitude: 28.979), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
     
     
     @State var userapiobject: UserAPIResponse?
+    let MapLocations = [
+        MapLocation(name: "St Francis Memorial Hospital", latitude: 41.03290226402944, longitude: 28.967581809821),
+        MapLocation(name: "The Ritz-Carlton, San Francisco", latitude: 41.09290226402944, longitude: 28.907581809821),
+        MapLocation(name: "Honey Honey Cafe & Crepery", latitude: 41.13290226402944, longitude: 28.667581809821)
+    ]
+    
     
     
     var body: some View {
@@ -51,44 +69,15 @@ struct ContentView: View {
                 .padding(UIScreen.screenWidth * 0.01)
             Text(userData)
                 .padding()
-            
-        }.onAppear{
-            Task {
-                guard let url = URL(string: "https://h91gqyffrl.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&isDriver=\(hmpgModel.role - 1)") else {
-                    return
+            Map(
+                coordinateRegion: $mapRegion,
+                interactionModes: MapInteractionModes.all,
+                showsUserLocation: true,
+                annotationItems: MapLocations,
+                annotationContent: { location in
+                    MapMarker(coordinate: location.coordinate, tint: AppTheme.backgroundColor)
                 }
-                
-                let task = URLSession.shared.dataTask(with: url) { data, response, error in
-                    
-                    if let error = error {
-                        print("Error: \(error.localizedDescription)")
-                    } else if let httpResponse = response as? HTTPURLResponse {
-                        if httpResponse.statusCode == 200 {
-                            DispatchQueue.main.async {
-                                if let data = data {
-                                    self.responseData = data
-                                    userData = String(data: data, encoding: .utf8) ?? ""
-                                    //print(userData)
-                                    if let jsonObject = convertStringToObject(userData) {
-                                        // Use the converted object
-                                        print(jsonObject)
-                                        hmpgModel.data_ready = true
-                                    } else {
-                                        print("Failed to convert string to object.")
-                                    }
-                                }
-                            }
-                        } else if httpResponse.statusCode == 400 {
-                            if let data = data {
-                                userData = String(data: data, encoding: .utf8) ?? "Error"
-                            }
-                        } else {
-                            userData = "Undefined Error"
-                        }
-                    }
-                }
-                task.resume()
-            }
+            )
         }
     }
     
@@ -156,7 +145,7 @@ struct ContentView: View {
         VStack{
             Button {
                 Task {
-                    guard let url = URL(string: "https://zbldso9cgi.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&day=\(getDayOfWeek(from: daystr) ?? 0)&isAttendance=\(userapiobject!.mo)") else {
+                    guard let url = URL(string: "https://zbldso9cgi.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&day=\(getDayOfWeek(from: daystr) ?? 0)") else {
                         return
                     }
                     
@@ -172,7 +161,6 @@ struct ContentView: View {
                                         status = String(data: data, encoding: .utf8) ?? ""
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                             withAnimation{
-                                                hmpgModel.send_panel.toggle()
                                                 userapiobject!.mo = !userapiobject!.mo
                                             }
                                         }
