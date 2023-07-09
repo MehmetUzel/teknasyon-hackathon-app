@@ -65,13 +65,15 @@ struct ContentView: View {
     
     func AdminPanelView() -> some View{
         VStack{
-            LogOutButtonView()
-            Text("Welcome Admin")
-                .foregroundColor(AppTheme.textColor)
-                .font(.system(size: AppTheme.bodyTextSize))
-                .padding(UIScreen.screenWidth * 0.01)
-            Text(userData)
-                .padding()
+            HStack {
+                LogOutButtonView()
+                Spacer()
+                Text("Welcome Admin")
+                    .foregroundColor(AppTheme.textColor)
+                    .font(.system(size: AppTheme.bodyTextSize))
+                    .padding(UIScreen.screenWidth * 0.01)
+                    .padding(.trailing)
+            }
             Map(
                 coordinateRegion: $mapRegion,
                 interactionModes: MapInteractionModes.all,
@@ -86,11 +88,14 @@ struct ContentView: View {
     
     func DriverPanelView() -> some View{
         VStack{
-            LogOutButtonView()
-            Text("Welcome Driver")
+            HStack{
+                LogOutButtonView()
+                Text("Welcome Driver")
+            }
                 .foregroundColor(AppTheme.textColor)
                 .font(.system(size: AppTheme.bodyTextSize))
                 .padding(UIScreen.screenWidth * 0.01)
+            Spacer()
             Text(userData)
                 .padding()
         }
@@ -139,18 +144,18 @@ struct ContentView: View {
     func UserPanelView() -> some View{
         VStack{
             HStack{
+                LogOutButtonView()
+                Spacer()
                 Text("Welcome")
                 if employeeObj != nil{
                     Text(employeeObj?.fullName.S ?? "Employee")
+                        .padding(.trailing)
                 }
-                Spacer()
-                LogOutButtonView()
             }
             .foregroundColor(AppTheme.textColor)
             .font(.system(size: AppTheme.bodyTextSize))
             .padding(UIScreen.screenWidth * 0.01)
-            Text(userData)
-                .padding()
+            Spacer()
             if hmpgModel.data_ready == true {
                 VStack{
                     Text("Weekly Attendance")
@@ -165,7 +170,7 @@ struct ContentView: View {
                             ToggleAttendanceView(daystr: "sun", indx: 6)
                         }
                     }
-                }
+                }.padding(.bottom , UIScreen.screenWidth * 0.1)
             }
         }.onAppear{
             updateUserData()
@@ -361,14 +366,11 @@ struct ContentView: View {
             }
         }){
             VStack{
-                Text("Log Out")
-                    .foregroundColor(AppTheme.textColor)
-                    .font(.system(size: AppTheme.bodyTextSize))
-                    .padding(UIScreen.screenWidth * 0.01)
-            }
-            .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
-            .background(.red)
-            .cornerRadius(16)
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: AppTheme.headerTextSize*1.1))
+                        .padding(UIScreen.screenWidth * 0.01)
+                        .foregroundColor(.red)
+            }.padding(.horizontal)
         }
     }
     
