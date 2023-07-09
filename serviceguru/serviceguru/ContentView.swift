@@ -85,6 +85,7 @@ struct ContentView: View {
                     }
                 )
             }
+            Spacer()
         }.onAppear{
             updateAdminData()
         }
@@ -116,7 +117,7 @@ struct ContentView: View {
                     .padding(.top)
                     .padding(.top)
                     .padding(.top)
-
+                    
                     VStack{
                         Text("Licence Plate")
                             .foregroundColor(AppTheme.textColor)
@@ -429,8 +430,20 @@ struct ContentView: View {
     func fieldsforLoginView(headtext: String) -> some View {
         VStack{
             Text(headtext)
-            TextField("id", text: $text_id).padding()
-            TextField("password", text: $text_password).padding()
+                .foregroundColor(AppTheme.textColor)
+                .font(.system(size: AppTheme.bodyTextSize))
+                .bold()
+                .padding(.vertical)
+            TextField("id", text: $text_id)
+                .padding(6.0)
+                .background(RoundedRectangle(cornerRadius: 4.0, style: .continuous)
+                    .stroke(.gray, lineWidth: 1.0))
+                .padding()
+            TextField("password", text: $text_password)
+                .padding(6.0)
+                .background(RoundedRectangle(cornerRadius: 4.0, style: .continuous)
+                    .stroke(.gray, lineWidth: 1.0))
+                .padding()
         }
     }
     
