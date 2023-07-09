@@ -35,8 +35,9 @@ struct ContentView: View {
     
     @State var employeeObj: EmployeeObj?
     @State var driverObj: DriverObj?
+    @State var pointsObj: PointsObj?
     
-    let MapLocations = [
+    @State var MapLocations = [
         MapLocation(name: "St Francis Memorial Hospital", latitude: 41.03290226402944, longitude: 28.967581809821),
         MapLocation(name: "The Ritz-Carlton, San Francisco", latitude: 41.09290226402944, longitude: 28.907581809821),
         MapLocation(name: "Honey Honey Cafe & Crepery", latitude: 41.13290226402944, longitude: 28.667581809821)
@@ -84,6 +85,8 @@ struct ContentView: View {
                     MapMarker(coordinate: location.coordinate, tint: AppTheme.backgroundColor)
                 }
             )
+        }.onAppear{
+            updateAdminData()
         }
     }
     
@@ -114,6 +117,48 @@ struct ContentView: View {
                 .padding()
         }.onAppear{
             updateUserData()
+        }
+    }
+    
+    func updateAdminData(){
+        Task {
+            guard let url = URL(string: "https://70hgtb5w2h.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney") else {
+                return
+            }
+            
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                
+                if let error = error {
+                    print("Error: \(error.localizedDescription)")
+                } else if let httpResponse = response as? HTTPURLResponse {
+                    if httpResponse.statusCode == 200 {
+                        DispatchQueue.main.async {
+                            if let data = data {
+                                do {
+                                        let myObject = try JSONDecoder().decode(PointsObj.self, from: data)
+                                        // Use myObject here
+                                        pointsObj = myObject
+                                        hmpgModel.data_ready = true
+                                        AddPointsToList()
+                                        print(myObject)
+                                    
+                                } catch {
+                                    print("Error decoding JSON: \(error)")
+                                }
+                                userData = String(data: data, encoding: .utf8) ?? ""
+                                print(userData)
+                            }
+                        }
+                    } else if httpResponse.statusCode == 400 {
+                        if let data = data {
+                            userData = String(data: data, encoding: .utf8) ?? "Error"
+                        }
+                    } else {
+                        userData = "Undefined Error"
+                    }
+                }
+            }
+            task.resume()
         }
     }
     
@@ -165,6 +210,15 @@ struct ContentView: View {
             task.resume()
         }
     }
+    
+    func AddPointsToList() {
+        if pointsObj != nil{
+                for index in 0..<(pointsObj?.id.count ?? 0){
+                MapLocations.append(MapLocation(name: (pointsObj?.id[index])!, latitude: (pointsObj?.lattitude[index])!, longitude: (pointsObj?.longitude[index])!))
+            }
+        }
+    }
+    
     
     func UserPanelView() -> some View{
         VStack{
@@ -471,6 +525,38 @@ struct ContentView: View {
         
         
         
+    }
+}
+
+struct PointsObj: Codable {
+    let id: [String]
+    let lattitude: [Double]
+    let longitude: [Double]
+    
+    enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case lattitude = "lattitude"
+        case longitude = "longitude"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let idString = try container.decode(String.self, forKey: .id)
+        id = idString.components(separatedBy: ",").compactMap { String($0) }
+        let latString = try container.decode(String.self, forKey: .lattitude)
+        lattitude = latString.components(separatedBy: ",").compactMap { Double($0) }
+        let longString = try container.decode(String.self, forKey: .longitude)
+        longitude = longString.components(separatedBy: ",").compactMap { Double($0) }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        let idString = id.map { String($0) }.joined(separator: ",")
+        try container.encode(idString, forKey: .id)
+        let latString = lattitude.map { String($0) }.joined(separator: ",")
+        try container.encode(latString, forKey: .lattitude)
+        let longString = longitude.map { String($0) }.joined(separator: ",")
+        try container.encode(longString, forKey: .longitude)
     }
 }
 
