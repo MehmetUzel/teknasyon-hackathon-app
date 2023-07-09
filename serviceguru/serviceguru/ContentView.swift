@@ -21,6 +21,7 @@ struct MapLocation: Identifiable {
 
 
 struct ContentView: View {
+    @Environment(\.openURL) var openURL
     
     @EnvironmentObject var hmpgModel: HomePageModel
     @State var text_id: String = ""
@@ -96,6 +97,7 @@ struct ContentView: View {
         VStack{
             HStack{
                 LogOutButtonView()
+                Spacer()
                 Text("Welcome Driver")
             }
             .foregroundColor(AppTheme.textColor)
@@ -104,19 +106,50 @@ struct ContentView: View {
             
             if hmpgModel.data_ready == true {
                 VStack{
-                    HStack{
-                        Text("Name : ")
+                    VStack{
+                        Text("Name")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize))
+                            .bold()
+                            .padding(.bottom)
                         Text(driverObj?.fullName.S ?? "")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize*0.9))
                     }
-                    HStack{
-                        Text("Plate : ")
+                    .padding(.top)
+                    .padding(.top)
+                    .padding(.top)
+
+                    VStack{
+                        Text("Licence Plate")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize))
+                            .bold()
+                            .padding(.vertical)
                         Text(driverObj?.plate.S ?? "")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize*0.9))
+                    }
+                    .padding(.bottom, UIScreen.screenHeight * 0.2)
+                    VStack{
+                        
+                        Button(action: {
+                            openURL(URL(string: driverObj?.link ?? "https://yandex.com.tr/harita/115707/fatih/?ll=28.978176%2C41.011219&z=10")!)
+                        }
+                        ){
+                            Text("Launch Route")
+                                .foregroundColor(AppTheme.textColor)
+                                .font(.system(size: AppTheme.bodyTextSize))
+                                .bold()
+                                .padding()
+                                .frame(width: UIScreen.screenWidth*0.7, height: UIScreen.screenHeight*0.044)
+                                .background(AppTheme.backgroundColor)
+                                .cornerRadius(16)
+                        }
                     }
                 }
             }
             Spacer()
-            Text(userData)
-                .padding()
         }.onAppear{
             updateUserData()
         }
@@ -546,24 +579,24 @@ struct PointsObj: Codable {
     }
     
     init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode([String].self, forKey: .id)
-            
-            let latStringArray = try container.decode([String].self, forKey: .latitude)
-            latitude = latStringArray.compactMap { Double($0) }
-            
-            let longStringArray = try container.decode([String].self, forKey: .longitude)
-            longitude = longStringArray.compactMap { Double($0) }
-        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode([String].self, forKey: .id)
         
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(id, forKey: .id)
-            let latStringArray = latitude.map { String($0) }
-            try container.encode(latStringArray, forKey: .latitude)
-            let longStringArray = longitude.map { String($0) }
-            try container.encode(longStringArray, forKey: .longitude)
-        }
+        let latStringArray = try container.decode([String].self, forKey: .latitude)
+        latitude = latStringArray.compactMap { Double($0) }
+        
+        let longStringArray = try container.decode([String].self, forKey: .longitude)
+        longitude = longStringArray.compactMap { Double($0) }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        let latStringArray = latitude.map { String($0) }
+        try container.encode(latStringArray, forKey: .latitude)
+        let longStringArray = longitude.map { String($0) }
+        try container.encode(longStringArray, forKey: .longitude)
+    }
 }
 
 struct Plate: Codable {
@@ -580,6 +613,7 @@ struct DriverObj: Codable {
     let id: ID
     let phone: Phone
     let is_available: Available
+    let link: String
     
     enum CodingKeys: String, CodingKey {
         case plate = "plate"
@@ -587,6 +621,7 @@ struct DriverObj: Codable {
         case id = "id"
         case phone = "phone"
         case is_available = "isAvailable"
+        case link = "link"
     }
     
     init(from decoder: Decoder) throws {
@@ -596,6 +631,7 @@ struct DriverObj: Codable {
         id = try container.decode(ID.self, forKey: .id)
         phone = try container.decode(Phone.self, forKey: .phone)
         is_available = try container.decode(Available.self, forKey: .is_available)
+        link = try container.decode(String.self, forKey: .link)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -605,6 +641,7 @@ struct DriverObj: Codable {
         try container.encode(id, forKey: .id)
         try container.encode(phone, forKey: .phone)
         try container.encode(is_available, forKey: .is_available)
+        try container.encode(link, forKey: .link)
         
     }
 }
