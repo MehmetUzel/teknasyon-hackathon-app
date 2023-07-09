@@ -17,6 +17,12 @@ struct ContentView: View {
     @State private var responseData: Data?
     @State var status: String = ""
     @State var userData: String = ""
+    @State var userObject: [String: Any] = [:]
+    @State var mondayComing: Bool = false
+    @State var tuesdayComing: Bool = false
+    
+    
+    @State var userapiobject: UserAPIResponse?
     
     
     var body: some View {
@@ -27,20 +33,25 @@ struct ContentView: View {
             ClientView()
         }
         else if hmpgModel.is_home == false && hmpgModel.send_panel == true{
-            UserPanelView()
+            if hmpgModel.role == 1 {
+                UserPanelView()
+            }
+            else if hmpgModel.role == 2 {
+                DriverPanelView()
+            }
         }
     }
     
-    func UserPanelView() -> some View{
+    func DriverPanelView() -> some View{
         VStack{
             LogOutButtonView()
-            Text("Welcome Employee")
+            Text("Welcome Driver")
                 .foregroundColor(AppTheme.textColor)
                 .font(.system(size: AppTheme.bodyTextSize))
                 .padding(UIScreen.screenWidth * 0.01)
             Text(userData)
                 .padding()
-    
+            
         }.onAppear{
             Task {
                 guard let url = URL(string: "https://h91gqyffrl.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&isDriver=\(hmpgModel.role - 1)") else {
@@ -57,6 +68,14 @@ struct ContentView: View {
                                 if let data = data {
                                     self.responseData = data
                                     userData = String(data: data, encoding: .utf8) ?? ""
+                                    //print(userData)
+                                    if let jsonObject = convertStringToObject(userData) {
+                                        // Use the converted object
+                                        print(jsonObject)
+                                        hmpgModel.data_ready = true
+                                    } else {
+                                        print("Failed to convert string to object.")
+                                    }
                                 }
                             }
                         } else if httpResponse.statusCode == 400 {
@@ -69,6 +88,120 @@ struct ContentView: View {
                     }
                 }
                 task.resume()
+            }
+        }
+    }
+    
+    func UserPanelView() -> some View{
+        VStack{
+            LogOutButtonView()
+            Text("Welcome Employee")
+                .foregroundColor(AppTheme.textColor)
+                .font(.system(size: AppTheme.bodyTextSize))
+                .padding(UIScreen.screenWidth * 0.01)
+            Text(userData)
+                .padding()
+            if hmpgModel.data_ready == true {
+                VStack{
+                    Text("Weekly Attendance")
+                    if userapiobject != nil{
+                        HStack{
+                            moToggleAttendanceView(daystr: "mo")
+                        }
+                    }
+                }
+            }
+        }.onAppear{
+            Task {
+                guard let url = URL(string: "https://h91gqyffrl.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&isDriver=\(hmpgModel.role - 1)") else {
+                    return
+                }
+                
+                let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                    
+                    if let error = error {
+                        print("Error: \(error.localizedDescription)")
+                    } else if let httpResponse = response as? HTTPURLResponse {
+                        if httpResponse.statusCode == 200 {
+                            DispatchQueue.main.async {
+                                if let data = data {
+                                    self.responseData = data
+                                    userData = String(data: data, encoding: .utf8) ?? ""
+                                    //print(userData)
+                                    if let jsonObject = convertStringToObject(userData) {
+                                        // Use the converted object
+                                        print(jsonObject)
+                                        userapiobject = jsonObject
+                                        hmpgModel.data_ready = true
+                                    } else {
+                                        print("Failed to convert string to object.")
+                                    }
+                                }
+                            }
+                        } else if httpResponse.statusCode == 400 {
+                            if let data = data {
+                                userData = String(data: data, encoding: .utf8) ?? "Error"
+                            }
+                        } else {
+                            userData = "Undefined Error"
+                        }
+                    }
+                }
+                task.resume()
+            }
+        }
+    }
+    
+    func moToggleAttendanceView(daystr: String) -> some View{
+        VStack{
+            Button {
+                Task {
+                    guard let url = URL(string: "https://zbldso9cgi.execute-api.eu-central-1.amazonaws.com/sadjourney/sadjourney?id=\(hmpgModel.user_id)&day=\(getDayOfWeek(from: daystr) ?? 0)&isAttendance=\(userapiobject!.mo)") else {
+                        return
+                    }
+                    
+                    let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                        
+                        if let error = error {
+                            print("Error: \(error.localizedDescription)")
+                        } else if let httpResponse = response as? HTTPURLResponse {
+                            if httpResponse.statusCode == 200 {
+                                DispatchQueue.main.async {
+                                    if let data = data {
+                                        self.responseData = data
+                                        status = String(data: data, encoding: .utf8) ?? ""
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            withAnimation{
+                                                hmpgModel.send_panel.toggle()
+                                                userapiobject!.mo = !userapiobject!.mo
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if httpResponse.statusCode == 400 {
+                                if let data = data {
+                                    status = String(data: data, encoding: .utf8) ?? "Error"
+                                }
+                            } else {
+                                status = "Undefined Error"
+                            }
+                        }
+                        
+                    }
+                    
+                    task.resume()
+                    
+                }
+            } label: {
+                VStack{
+                    Text(daystr)
+                        .foregroundColor(AppTheme.textColor)
+                        .font(.system(size: AppTheme.bodyTextSize))
+                        .padding(UIScreen.screenWidth * 0.01)
+                }
+                .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
+                .background(userapiobject!.mo ? .gray : AppTheme.backgroundColor)
+                .cornerRadius(16)
             }
         }
     }
@@ -172,6 +305,7 @@ struct ContentView: View {
                 text_id = ""
                 text_password = ""
                 status = ""
+                hmpgModel.data_ready = false
             }
         }){
             VStack{
@@ -194,6 +328,8 @@ struct ContentView: View {
                 text_id = ""
                 text_password = ""
                 status = ""
+                hmpgModel.data_ready = false
+                
             }
         }){
             VStack{
@@ -242,7 +378,154 @@ struct ContentView: View {
     
     // ----- Map Functions
     
+    func convertStringToObject(_ jsonString: String) -> UserAPIResponse? {
+        if let jsonObject = convertJSONToClass(jsonString: jsonString) {
+            return jsonObject
+        }
+        return nil
+    }
+    
+    
+    func getDayOfWeek(from weekday: String) -> Int? {
+        let weekdays = ["mo", "tu", "we", "th", "fr", "sa", "su"]
+        
+        guard let index = weekdays.firstIndex(of: weekday) else {
+            return nil
+        }
+        
+        let adjustedIndex = (index + 1) % weekdays.count // Adjust index to start from Monday
+        
+        return adjustedIndex
+    }
+    
 }
+
+/*
+ // Struct representing the API response
+ struct UserAPIResponse: Codable {
+ let tu: BoolWrapper?
+ let mo: BoolWrapper?
+ let su: BoolWrapper?
+ let lattitude: NumberWrapper?
+ let fullName: StringWrapper?
+ let fr: BoolWrapper?
+ let sa: BoolWrapper?
+ let we: BoolWrapper?
+ let th: BoolWrapper?
+ let longitude: NumberWrapper?
+ let id: StringWrapper?
+ let phone: StringWrapper?
+ }
+ 
+ // Struct representing a wrapper for boolean values
+ struct BoolWrapper: Codable {
+ let BOOL: Bool?
+ }
+ 
+ // Struct representing a wrapper for number values
+ struct NumberWrapper: Codable {
+ let N: String?
+ }
+ 
+ // Struct representing a wrapper for string values
+ struct StringWrapper: Codable {
+ let S: String?
+ }
+ */
+
+class UserAPIResponse: ObservableObject {
+    @Published var tu = false
+    @Published var mo = true
+    @Published var su = true
+    @Published var lattitude: Double = 0.0
+    @Published var fullName = ""
+    @Published var fr = true
+    @Published var sa = true
+    @Published var we = false
+    @Published var th = true
+    @Published var longitude: Double = 0.0
+    @Published var id = ""
+    @Published var phone = ""
+}
+
+func convertJSONToClass(jsonString: String) -> UserAPIResponse? {
+    guard let jsonData = jsonString.data(using: .utf8) else {
+        return nil
+    }
+    
+    do {
+        let decoder = JSONDecoder()
+        let jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: [])
+        
+        guard let jsonDict = jsonObject as? [String: Any] else {
+            return nil
+        }
+        
+        let myClass = UserAPIResponse()
+        
+        // Access each key-value pair in the dictionary and update the corresponding property
+        for (key, value) in jsonDict {
+            switch key {
+            case "tu":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.tu = bool
+                }
+            case "mo":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.mo = bool
+                }
+            case "su":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.su = bool
+                }
+            case "lattitude":
+                if let numberValue = value as? [String: String], let stringValue = numberValue["N"], let doubleValue = Double(stringValue) {
+                    myClass.lattitude = doubleValue
+                }
+            case "fullName":
+                if let stringValue = value as? [String: String], let fullName = stringValue["S"] {
+                    myClass.fullName = fullName
+                }
+            case "fr":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.fr = bool
+                }
+            case "sa":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.sa = bool
+                }
+            case "we":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.we = bool
+                }
+            case "th":
+                if let boolValue = value as? [String: Bool], let bool = boolValue["BOOL"] {
+                    myClass.th = bool
+                }
+            case "longitude":
+                if let numberValue = value as? [String: String], let stringValue = numberValue["N"], let doubleValue = Double(stringValue) {
+                    myClass.longitude = doubleValue
+                }
+            case "id":
+                if let stringValue = value as? [String: String], let id = stringValue["S"] {
+                    myClass.id = id
+                }
+            case "phone":
+                if let stringValue = value as? [String: String], let phone = stringValue["S"] {
+                    myClass.phone = phone
+                }
+            default:
+                break
+            }
+        }
+        
+        return myClass
+    } catch {
+        print("Error: \(error)")
+        return nil
+    }
+}
+
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {

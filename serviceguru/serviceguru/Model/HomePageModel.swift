@@ -37,5 +37,6 @@ class HomePageModel: ObservableObject{
     @Published var is_home: Bool = true
     @Published var role: Int = getRole()
     @Published var user_id: String = getId()
+    @Published var data_ready: Bool = false
 }
 
