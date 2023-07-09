@@ -34,6 +34,7 @@ struct ContentView: View {
     
     
     @State var employeeObj: EmployeeObj?
+    @State var driverObj: DriverObj?
     
     let MapLocations = [
         MapLocation(name: "St Francis Memorial Hospital", latitude: 41.03290226402944, longitude: 28.967581809821),
@@ -95,9 +96,24 @@ struct ContentView: View {
                 .foregroundColor(AppTheme.textColor)
                 .font(.system(size: AppTheme.bodyTextSize))
                 .padding(UIScreen.screenWidth * 0.01)
+            
+            if hmpgModel.data_ready == true {
+                VStack{
+                    HStack{
+                        Text("Name : ")
+                        Text(driverObj?.fullName.S ?? "")
+                    }
+                    HStack{
+                        Text("Plate : ")
+                        Text(driverObj?.plate.S ?? "")
+                    }
+                }
+            }
             Spacer()
             Text(userData)
                 .padding()
+        }.onAppear{
+            updateUserData()
         }
     }
     
@@ -116,11 +132,20 @@ struct ContentView: View {
                         DispatchQueue.main.async {
                             if let data = data {
                                 do {
-                                    let myObject = try JSONDecoder().decode(EmployeeObj.self, from: data)
-                                    // Use myObject here
-                                    employeeObj = myObject
-                                    hmpgModel.data_ready = true
-                                    print(myObject)
+                                    if hmpgModel.role == 1{
+                                        let myObject = try JSONDecoder().decode(EmployeeObj.self, from: data)
+                                        // Use myObject here
+                                        employeeObj = myObject
+                                        hmpgModel.data_ready = true
+                                        print(myObject)
+                                    }
+                                    else{
+                                        let myObject = try JSONDecoder().decode(DriverObj.self, from: data)
+                                        // Use myObject here
+                                        driverObj = myObject
+                                        hmpgModel.data_ready = true
+                                        print(myObject)
+                                    }
                                 } catch {
                                     print("Error decoding JSON: \(error)")
                                 }
@@ -158,7 +183,31 @@ struct ContentView: View {
             Spacer()
             if hmpgModel.data_ready == true {
                 VStack{
+                    VStack{
+                        Text("Licence Plate")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize))
+                            .bold()
+                            .padding(.bottom)
+                        Text(employeeObj?.driverPlate ?? "")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize*0.9))
+                    }
+                    VStack{
+                        Text("Contact to Driver")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize))
+                            .bold()
+                            .padding(.vertical)
+                        Text(employeeObj?.driverPhone ?? "")
+                            .foregroundColor(AppTheme.textColor)
+                            .font(.system(size: AppTheme.bodyTextSize*0.9))
+                    }
+                    Spacer()
                     Text("Weekly Attendance")
+                        .foregroundColor(AppTheme.textColor)
+                        .font(.system(size: AppTheme.bodyTextSize))
+                        .padding()
                     if employeeObj != nil{
                         VStack{
                             ToggleAttendanceView(daystr: "mon", indx: 0)
@@ -170,6 +219,8 @@ struct ContentView: View {
                             ToggleAttendanceView(daystr: "sun", indx: 6)
                         }
                     }
+                    Text("! Changes for next day is forbidden")
+                        .padding(.top)
                 }.padding(.bottom , UIScreen.screenWidth * 0.1)
             }
         }.onAppear{
@@ -423,6 +474,51 @@ struct ContentView: View {
     }
 }
 
+struct Plate: Codable {
+    let S: String
+}
+
+struct Available: Codable {
+    let BOOL: Bool
+}
+
+struct DriverObj: Codable {
+    let plate: Plate
+    let fullName: FullName
+    let id: ID
+    let phone: Phone
+    let is_available: Available
+    
+    enum CodingKeys: String, CodingKey {
+        case plate = "plate"
+        case fullName = "fullName"
+        case id = "id"
+        case phone = "phone"
+        case is_available = "isAvailable"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        plate = try container.decode(Plate.self, forKey: .plate)
+        fullName = try container.decode(FullName.self, forKey: .fullName)
+        id = try container.decode(ID.self, forKey: .id)
+        phone = try container.decode(Phone.self, forKey: .phone)
+        is_available = try container.decode(Available.self, forKey: .is_available)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(plate, forKey: .plate)
+        try container.encode(fullName, forKey: .fullName)
+        try container.encode(id, forKey: .id)
+        try container.encode(phone, forKey: .phone)
+        try container.encode(is_available, forKey: .is_available)
+        
+    }
+}
+
+
+
 struct Lattitude: Codable {
     let N: String
 }
@@ -443,9 +539,6 @@ struct Phone: Codable {
     let S: String
 }
 
-struct DriverID: Codable {
-    let S: String
-}
 
 struct EmployeeObj: Codable {
     let lattitude: Lattitude
@@ -453,7 +546,8 @@ struct EmployeeObj: Codable {
     let longitude: Longitude
     let id: ID
     let phone: Phone
-    let driverId: DriverID
+    let driverPhone: String
+    let driverPlate: String
     let attendance: [Int] // Changed the type to an array of Integers
     
     enum CodingKeys: String, CodingKey {
@@ -462,7 +556,8 @@ struct EmployeeObj: Codable {
         case longitude = "longitude"
         case id = "id"
         case phone = "phone"
-        case driverId = "driverId"
+        case driverPhone = "driverPhone"
+        case driverPlate = "plate"
         case attendance = "attendance"
     }
     
@@ -473,8 +568,8 @@ struct EmployeeObj: Codable {
         longitude = try container.decode(Longitude.self, forKey: .longitude)
         id = try container.decode(ID.self, forKey: .id)
         phone = try container.decode(Phone.self, forKey: .phone)
-        driverId = try container.decode(DriverID.self, forKey: .driverId)
-        
+        driverPhone = try container.decode(String.self, forKey: .driverPhone)
+        driverPlate = try container.decode(String.self, forKey: .driverPlate)
         let attendanceString = try container.decode(String.self, forKey: .attendance)
         attendance = attendanceString.components(separatedBy: ",").compactMap { Int($0) }
     }
@@ -486,8 +581,8 @@ struct EmployeeObj: Codable {
         try container.encode(longitude, forKey: .longitude)
         try container.encode(id, forKey: .id)
         try container.encode(phone, forKey: .phone)
-        try container.encode(driverId, forKey: .driverId)
-        
+        try container.encode(driverPhone, forKey: .driverPhone)
+        try container.encode(driverPlate, forKey: .driverPlate)
         let attendanceString = attendance.map { String($0) }.joined(separator: ",")
         try container.encode(attendanceString, forKey: .attendance)
     }
