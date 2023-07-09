@@ -39,10 +39,7 @@ struct ContentView: View {
     @State var pointsObj: PointsObj?
     
     @State var MapLocations = [
-        MapLocation(name: "St Francis Memorial Hospital", latitude: 41.03290226402944, longitude: 28.967581809821),
-        MapLocation(name: "The Ritz-Carlton, San Francisco", latitude: 41.09290226402944, longitude: 28.907581809821),
-        MapLocation(name: "Honey Honey Cafe & Crepery", latitude: 41.13290226402944, longitude: 28.667581809821)
-    ]
+        MapLocation(name: "Murphy, Simmons and Wright", latitude: 28.72825065, longitude: 41.13993933), MapLocation(name: "Long, Morris and Graves", latitude: 28.91811619, longitude: 41.03685364), MapLocation(name: "Peterson, Meadows and Gonzalez", latitude: 29.30236085, longitude: 41.07419699)]
     
     
     
@@ -252,8 +249,8 @@ struct ContentView: View {
     
     func AddPointsToList() {
         if pointsObj != nil{
-            for index in 15..<(pointsObj?.id.count ?? 0){
-                MapLocations.append(MapLocation(name: "dsflkjglkdsf", latitude: (pointsObj?.latitude[index])!, longitude: (pointsObj?.longitude[index])!))
+            for index in 0..<(pointsObj?.id.count ?? 0){
+                MapLocations.append(MapLocation(name: "dsflkjglkdsf", latitude: (pointsObj?.longitude[index])! , longitude: (pointsObj?.latitude[index])!))
             }
         }
     }
