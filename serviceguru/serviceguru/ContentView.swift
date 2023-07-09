@@ -542,6 +542,14 @@ struct ContentView: View {
     
     func RoleSelectionView() -> some View {
         VStack{
+            Image("logo")
+                .padding(.bottom)
+            Text("Welcome to SadJourney")
+                .foregroundColor(AppTheme.textColor)
+                .font(.system(size: AppTheme.bodyTextSize))
+                .bold()
+                .padding(UIScreen.screenWidth * 0.01)
+                .padding(.bottom)
             roleStack(headert: "Employee")
                 .onTapGesture {
                     updateRole(role: 1)
