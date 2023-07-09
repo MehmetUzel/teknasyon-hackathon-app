@@ -269,40 +269,42 @@ struct ContentView: View {
             } label: {
                 VStack{
                     Text("Login")
-                        .foregroundColor(AppTheme.textColor)
+                        .foregroundColor(.white)
                         .font(.system(size: AppTheme.bodyTextSize))
                         .padding(UIScreen.screenWidth * 0.01)
                 }
-                .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
-                .background(.gray)
+                .frame(width: UIScreen.screenWidth*0.5, height: UIScreen.screenHeight*0.044)
+                .background(AppTheme.backgroundColor)
                 .cornerRadius(16)
             }
         }
     }
     
-    func DriverView() -> some View {
+    func fieldsforLoginView(headtext: String) -> some View {
         VStack{
-            Text("Driver Login")
+            Text(headtext)
             TextField("id", text: $text_id).padding()
             TextField("password", text: $text_password).padding()
+        }
+    }
+    
+    func DriverView() -> some View {
+        VStack{
+            fieldsforLoginView(headtext: "Driver Login")
             LoginButton()
         }
     }
     
     func EmployeeView() -> some View {
         VStack{
-            Text("Employee Login")
-            TextField("id", text: $text_id).padding()
-            TextField("password", text: $text_password).padding()
+            fieldsforLoginView(headtext: "Employee Login")
             LoginButton()
         }
     }
     
     func AdminView() -> some View {
         VStack{
-            Text("Admin Login")
-            TextField("id", text: $text_id).padding()
-            TextField("password", text: $text_password).padding()
+            fieldsforLoginView(headtext: "Admin Login")
             LoginButton()
         }
     }
@@ -338,14 +340,11 @@ struct ContentView: View {
             }
         }){
             VStack{
-                Text("Back")
-                    .foregroundColor(AppTheme.textColor)
-                    .font(.system(size: AppTheme.bodyTextSize))
+                Image(systemName: "chevron.backward.circle.fill")
+                    .font(.system(size: AppTheme.headerTextSize*1.4))
                     .padding(UIScreen.screenWidth * 0.01)
-            }
-            .frame(width: UIScreen.screenWidth*0.3, height: UIScreen.screenHeight*0.04)
-            .background(.gray)
-            .cornerRadius(16)
+                    .foregroundColor(AppTheme.backgroundColor)
+            }.padding(.horizontal)
         }
     }
     
@@ -376,6 +375,9 @@ struct ContentView: View {
     func roleStack(headert: String) -> some View{
         VStack{
             Text(headert)
+                .foregroundColor(.white)
+                .font(.system(size: AppTheme.bodyTextSize))
+                .bold()
         }
         .frame(width: UIScreen.screenWidth * 0.6, height: UIScreen.screenHeight * 0.1)
         .background(AppTheme.backgroundColor)
@@ -388,20 +390,26 @@ struct ContentView: View {
                 .onTapGesture {
                     updateRole(role: 1)
                     hmpgModel.role = 1
-                    hmpgModel.is_home.toggle()
+                    withAnimation{
+                        hmpgModel.is_home.toggle()
+                    }
                 }
             
             roleStack(headert: "Driver")
                 .onTapGesture {
                     updateRole(role: 2)
                     hmpgModel.role = 2
-                    hmpgModel.is_home.toggle()
+                    withAnimation{
+                        hmpgModel.is_home.toggle()
+                    }
                 }
             roleStack(headert: "Admin")
                 .onTapGesture {
                     updateRole(role: 3)
                     hmpgModel.role = 3
-                    hmpgModel.is_home.toggle()
+                    withAnimation{
+                        hmpgModel.is_home.toggle()
+                    }
                 }
         }
         
@@ -412,82 +420,82 @@ struct ContentView: View {
         
     }
 }
+
+struct Lattitude: Codable {
+    let N: String
+}
+
+struct FullName: Codable {
+    let S: String
+}
+
+struct Longitude: Codable {
+    let N: String
+}
+
+struct ID: Codable {
+    let S: String
+}
+
+struct Phone: Codable {
+    let S: String
+}
+
+struct DriverID: Codable {
+    let S: String
+}
+
+struct EmployeeObj: Codable {
+    let lattitude: Lattitude
+    let fullName: FullName
+    let longitude: Longitude
+    let id: ID
+    let phone: Phone
+    let driverId: DriverID
+    let attendance: [Int] // Changed the type to an array of Integers
     
-    struct Lattitude: Codable {
-        let N: String
+    enum CodingKeys: String, CodingKey {
+        case lattitude = "lattitude"
+        case fullName = "fullName"
+        case longitude = "longitude"
+        case id = "id"
+        case phone = "phone"
+        case driverId = "driverId"
+        case attendance = "attendance"
     }
     
-    struct FullName: Codable {
-        let S: String
-    }
-    
-    struct Longitude: Codable {
-        let N: String
-    }
-    
-    struct ID: Codable {
-        let S: String
-    }
-    
-    struct Phone: Codable {
-        let S: String
-    }
-    
-    struct DriverID: Codable {
-        let S: String
-    }
-    
-    struct EmployeeObj: Codable {
-        let lattitude: Lattitude
-        let fullName: FullName
-        let longitude: Longitude
-        let id: ID
-        let phone: Phone
-        let driverId: DriverID
-        let attendance: [Int] // Changed the type to an array of Integers
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lattitude = try container.decode(Lattitude.self, forKey: .lattitude)
+        fullName = try container.decode(FullName.self, forKey: .fullName)
+        longitude = try container.decode(Longitude.self, forKey: .longitude)
+        id = try container.decode(ID.self, forKey: .id)
+        phone = try container.decode(Phone.self, forKey: .phone)
+        driverId = try container.decode(DriverID.self, forKey: .driverId)
         
-        enum CodingKeys: String, CodingKey {
-            case lattitude = "lattitude"
-            case fullName = "fullName"
-            case longitude = "longitude"
-            case id = "id"
-            case phone = "phone"
-            case driverId = "driverId"
-            case attendance = "attendance"
-        }
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            lattitude = try container.decode(Lattitude.self, forKey: .lattitude)
-            fullName = try container.decode(FullName.self, forKey: .fullName)
-            longitude = try container.decode(Longitude.self, forKey: .longitude)
-            id = try container.decode(ID.self, forKey: .id)
-            phone = try container.decode(Phone.self, forKey: .phone)
-            driverId = try container.decode(DriverID.self, forKey: .driverId)
-            
-            let attendanceString = try container.decode(String.self, forKey: .attendance)
-            attendance = attendanceString.components(separatedBy: ",").compactMap { Int($0) }
-        }
-        
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(lattitude, forKey: .lattitude)
-            try container.encode(fullName, forKey: .fullName)
-            try container.encode(longitude, forKey: .longitude)
-            try container.encode(id, forKey: .id)
-            try container.encode(phone, forKey: .phone)
-            try container.encode(driverId, forKey: .driverId)
-            
-            let attendanceString = attendance.map { String($0) }.joined(separator: ",")
-            try container.encode(attendanceString, forKey: .attendance)
-        }
+        let attendanceString = try container.decode(String.self, forKey: .attendance)
+        attendance = attendanceString.components(separatedBy: ",").compactMap { Int($0) }
     }
     
-    
-    
-    
-    struct ContentView_Previews: PreviewProvider {
-        static var previews: some View {
-            ContentView()
-        }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(lattitude, forKey: .lattitude)
+        try container.encode(fullName, forKey: .fullName)
+        try container.encode(longitude, forKey: .longitude)
+        try container.encode(id, forKey: .id)
+        try container.encode(phone, forKey: .phone)
+        try container.encode(driverId, forKey: .driverId)
+        
+        let attendanceString = attendance.map { String($0) }.joined(separator: ",")
+        try container.encode(attendanceString, forKey: .attendance)
     }
+}
+
+
+
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
